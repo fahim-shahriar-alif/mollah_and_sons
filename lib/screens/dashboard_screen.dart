@@ -154,14 +154,18 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
         foregroundColor: Colors.white,
+        centerTitle: true,
         title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               _isLoadingUserData ? localizations.dashboard : _shopName,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                height: 1.2,
               ),
             ),
             if (!_isLoadingUserData)
@@ -171,6 +175,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   fontSize: 12,
                   fontWeight: FontWeight.normal,
                   color: Colors.white70,
+                  height: 1.0,
                 ),
               ),
           ],
