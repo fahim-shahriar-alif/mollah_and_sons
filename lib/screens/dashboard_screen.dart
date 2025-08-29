@@ -364,6 +364,7 @@ class _ProductCardState extends State<ProductCard>
   late AnimationController _hoverController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _elevationAnimation;
+  bool _isAddedToCart = false;
 
   @override
   void initState() {
@@ -520,29 +521,34 @@ class _ProductCardState extends State<ProductCard>
                             width: double.infinity,
                             height: 32,
                             child: ElevatedButton(
-                              onPressed: () {
-                                widget.cartService.addItem(widget.product.toLegacyFormat());
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Added to cart!',
-                                      style: const TextStyle(color: Colors.white),
+                              onPressed: _isAddedToCart
+                                ? null
+                                : () {
+                                  setState(() {
+                                    _isAddedToCart = true;
+                                  });
+                                  widget.cartService.addItem(widget.product.toLegacyFormat());
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Added to cart!',
+                                        style: const TextStyle(color: Colors.white),
+                                      ),
+                                      backgroundColor: const Color(0xFF2E7D32),
+                                      duration: const Duration(seconds: 2),
+                                      action: SnackBarAction(
+                                        label: 'View Cart',
+                                        textColor: Colors.white,
+                                        onPressed: () {
+                                          // Navigate to cart - will be implemented
+                                        },
+                                      ),
                                     ),
-                                    backgroundColor: const Color(0xFF2E7D32),
-                                    duration: const Duration(seconds: 2),
-                                    action: SnackBarAction(
-                                      label: 'View Cart',
-                                      textColor: Colors.white,
-                                      onPressed: () {
-                                        // Navigate to cart - will be implemented
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2E7D32),
-                                foregroundColor: Colors.white,
+                                backgroundColor: _isAddedToCart ? Colors.grey : const Color(0xFF2E7D32),
+                                foregroundColor: _isAddedToCart ? Colors.white : Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -550,7 +556,7 @@ class _ProductCardState extends State<ProductCard>
                                 elevation: 4,
                               ),
                               child: Text(
-                                'Add to Cart',
+                                _isAddedToCart ? 'Added' : 'Add to Cart',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
