@@ -29,8 +29,29 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>mollah_and_sons</title>
+  <title>Mollah And Sons</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  
+  <!-- Firebase Configuration -->
+  <script>
+    // Initialize Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCS8b65YtMsHgvxj_H-kCjuW-X9CVQVZoM",
+      authDomain: "mollah-and-sons-fertilizer.firebaseapp.com",
+      projectId: "mollah-and-sons-fertilizer",
+      storageBucket: "mollah-and-sons-fertilizer.firebasestorage.app",
+      messagingSenderId: "326155030285",
+      appId: "1:326155030285:web:348364587d0d0767f4aa44"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

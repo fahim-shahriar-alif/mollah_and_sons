@@ -41,13 +41,12 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC54OdgFhaR92lcNorAN8D30bCEvH4PJWc',
-    appId: '1:865688251728:web:fe5c4a463eb8f02ecc1055',
-    messagingSenderId: '865688251728',
-    projectId: 'mollah-and-sons',
-    authDomain: 'mollah-and-sons.firebaseapp.com',
-    storageBucket: 'mollah-and-sons.firebasestorage.app',
-    measurementId: 'G-JRY4Q0VKV7',
+    apiKey: 'AIzaSyCS8b65YtMsHgvxj_H-kCjuW-X9CVQVZoM',
+    appId: '1:326155030285:web:348364587d0d0767f4aa44',
+    messagingSenderId: '326155030285',
+    projectId: 'mollah-and-sons-fertilizer',
+    authDomain: 'mollah-and-sons-fertilizer.firebaseapp.com',
+    storageBucket: 'mollah-and-sons-fertilizer.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
