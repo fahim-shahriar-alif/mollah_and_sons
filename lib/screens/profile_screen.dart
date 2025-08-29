@@ -242,13 +242,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 duration: const Duration(milliseconds: 1200),
                                 tween: Tween(begin: 0.0, end: 1.0),
                                 builder: (context, value, child) {
-                                  return Transform.rotate(
-                                    angle: value * 0.1,
-                                    child: const Icon(
-                                      Icons.person,
-                                      size: 50,
-                                      color: const Color(0xFF2E7D32),
-                                    ),
+                                  return const Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: Color(0xFF2E7D32),
                                   );
                                 },
                               ),

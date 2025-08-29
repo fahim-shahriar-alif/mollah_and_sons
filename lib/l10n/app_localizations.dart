@@ -44,6 +44,7 @@ class AppLocalizations {
   String get passwordMinLength => locale.languageCode == 'bn' ? 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে' : 'Password must be at least 6 characters';
   String get signUpText => locale.languageCode == 'bn' ? 'নিবন্ধন করুন' : 'Sign Up';
   String get loginFailed => locale.languageCode == 'bn' ? 'লগইন ব্যর্থ হয়েছে' : 'Login failed';
+  String get invalidCredentials => locale.languageCode == 'bn' ? 'ভুল ইমেইল বা পাসওয়ার্ড' : 'Invalid username and password';
 
   // Dashboard
   String get dashboard => locale.languageCode == 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard';

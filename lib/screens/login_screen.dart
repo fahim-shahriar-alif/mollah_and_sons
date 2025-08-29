@@ -111,10 +111,19 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.loginFailed,
+            content: Center(
+              child: Text(
+                AppLocalizations.of(context)!.invalidCredentials,
+                textAlign: TextAlign.center,
+              ),
             ),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: 30,
+              left: 20,
+              right: 20,
+            ),
           ),
         );
       }

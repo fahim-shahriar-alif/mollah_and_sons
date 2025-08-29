@@ -182,12 +182,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         elevation: 0,
         automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Column(
         children: [
