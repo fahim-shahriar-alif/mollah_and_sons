@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "326155030285",
+    "project_id": "mollah-and-sons-fertilizer",
+    "storage_bucket": "mollah-and-sons-fertilizer.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:326155030285:android:348364587d0d0767f4aa44",
+        "android_client_info": {
+          "package_name": "com.example.alif.mollah_and_sons"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCS8b65YtMsHgvxj_H-kCjuW-X9CVQVZoM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

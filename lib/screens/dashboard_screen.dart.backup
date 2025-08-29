@@ -1,0 +1,801 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import '../models/product_model.dart';
+import '../services/product_service.dart';
+import '../services/cart_service.dart';
+import '../l10n/app_localizations.dart';
+import 'main_navigation_screen.dart';
+import '../services/firebase_auth_service.dart';
+
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen>
+    with TickerProviderStateMixin {
+  final CartService _cartService = CartService();
+  final ProductService _productService = ProductService();
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  String selectedCategory = 'All';
+  final List<String> categories = ['All', 'Chemical Fertilizer', 'Organic Fertilizer', 'Micronutrient'];
+  String _shopName = 'Mollah & Sons'; // Default fallback
+  bool _isLoadingUserData = true;
+  
+  late AnimationController _staggerController;
+  late AnimationController _floatingController;
+  late Animation<double> _floatingAnimation;
+  
+  List<String> _getLocalizedCategories(AppLocalizations localizations) {
+    return [
+      localizations.allProducts,
+      localizations.chemicalFertilizer,
+      localizations.organicFertilizer,
+      localizations.micronutrient,
+    ];
+  }
+  
+  String _getCategoryKey(String displayCategory, AppLocalizations localizations) {
+    final localizedCategories = _getLocalizedCategories(localizations);
+    final index = localizedCategories.indexOf(displayCategory);
+    return index >= 0 ? categories[index] : displayCategory;
+  }
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnimations();
+    _loadUserData();
+  }
+
+  void _initializeAnimations() {
+    _staggerController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _floatingController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
+      vsync: this,
+    );
+
+    _floatingAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _floatingController,
+      curve: Curves.easeInOut,
+    ));
+
+    _floatingController.repeat(reverse: true);
+    _staggerController.forward();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userData = await _authService.getUserData();
+      if (mounted) {
+        setState(() {
+          _shopName = userData?['shopName'] ?? 'Mollah & Sons';
+          _isLoadingUserData = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _shopName = 'Mollah & Sons'; // Fallback
+          _isLoadingUserData = false;
+        });
+      }
+    }
+  }
+
+  List<ProductModel> _filterProducts(List<ProductModel> products) {
+    List<ProductModel> categoryFiltered;
+    if (selectedCategory == 'All') {
+      categoryFiltered = products;
+    } else {
+      categoryFiltered = products.where((product) => product.category == selectedCategory).toList();
+    }
+    
+    // Apply search filter
+    if (_searchQuery.isEmpty) {
+      return categoryFiltered;
+    }
+    
+    return categoryFiltered.where((product) {
+      final name = product.name.toLowerCase();
+      final description = product.description.toLowerCase();
+      final category = product.category.toLowerCase();
+      final companyName = product.companyName.toLowerCase();
+      final query = _searchQuery.toLowerCase();
+      
+      return name.contains(query) || 
+             description.contains(query) || 
+             category.contains(query) ||
+             companyName.contains(query);
+    }).toList();
+  }
+
+  void _showOrderDialog(ProductModel product) {
+    final localizations = AppLocalizations.of(context)!;
+    int quantity = 1;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('${localizations.addToCart} ${product.name}'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${localizations.price}: ${localizations.currency}${product.price} ${product.unit}'),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(localizations.isBengali ? 'পরিমাণ:' : 'Quantity:'),
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: quantity > 1 ? () => setState(() => quantity--) : null,
+                            icon: const Icon(Icons.remove),
+                          ),
+                          Text('$quantity'),
+                          IconButton(
+                            onPressed: quantity < product.stockQuantity ? () => setState(() => quantity++) : null,
+                            icon: const Icon(Icons.add),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '${localizations.isBengali ? 'মোট:' : 'Total:'} ${localizations.currency}${(product.price * quantity).toStringAsFixed(0)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(localizations.cancel),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _addToCart(product, quantity);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E7D32),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(localizations.addToCart),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _addToCart(ProductModel product, int quantity) {
+    final localizations = AppLocalizations.of(context)!;
+    _cartService.addItem(product.toLegacyFormat(), quantity: quantity);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(localizations.isBengali 
+          ? '${quantity}x ${product.name} কার্টে যোগ করা হয়েছে'
+          : '${quantity}x ${product.name} added to cart'),
+        backgroundColor: const Color(0xFF2E7D32),
+        action: SnackBarAction(
+          label: localizations.viewCart,
+          textColor: Colors.white,
+          onPressed: () {
+            // Switch to cart tab using the controller
+            MainNavigationController.switchToCart();
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF1B5E20),
+                Color(0xFF2E7D32),
+                Color(0xFF388E3C),
+              ],
+            ),
+          ),
+        ),
+        foregroundColor: Colors.white,
+        title: Text(_isLoadingUserData ? AppLocalizations.of(context)!.appName : _shopName),
+        actions: [
+          const LanguageToggleButton(),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Welcome Section with Search
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(
+              MediaQuery.of(context).size.width * 0.05,
+            ),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF1B5E20),
+                  Color(0xFF2E7D32),
+                  Color(0xFF388E3C),
+                ],
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x1A000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.isBengali
+                    ? 'মোল্লা এন্ড সন্সে স্বাগতম'
+                    : 'Welcome to Mollah & Sons',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: MediaQuery.of(context).size.width * 0.06,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+                Text(
+                  AppLocalizations.of(context)!.isBengali
+                    ? 'ভালো ফসলের জন্য মানসম্পন্ন সার'
+                    : 'Quality Fertilizers for Better Harvest',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: MediaQuery.of(context).size.width * 0.04,
+                  ),
+                ),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.025),
+                // Search Bar
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!.isBengali
+                        ? 'সার খুঁজুন...'
+                        : 'Search fertilizers...',
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: MediaQuery.of(context).size.width * 0.04,
+                        vertical: MediaQuery.of(context).size.height * 0.015,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Category Filter
+          Container(
+            height: MediaQuery.of(context).size.height * 0.06,
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width * 0.05,
+            ),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final localizations = AppLocalizations.of(context)!;
+                final localizedCategories = _getLocalizedCategories(localizations);
+                final category = categories[index];
+                final displayCategory = localizedCategories[index];
+                final isSelected = selectedCategory == category;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(displayCategory),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        selectedCategory = category;
+                      });
+                    },
+                    selectedColor: const Color(0xFF2E7D32),
+                    backgroundColor: isSelected ? null : const Color(0xFFF1F8E9),
+                    side: BorderSide(
+                      color: isSelected ? Colors.transparent : const Color(0xFF81C784),
+                      width: 1,
+                    ),
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : const Color(0xFF1B5E20),
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          
+          // Products Grid
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(
+                MediaQuery.of(context).size.width * 0.05,
+              ),
+              child: StreamBuilder<List<ProductModel>>(
+                stream: _productService.getProducts(),
+                builder: (context, snapshot) {
+                  print('DEBUG: Dashboard - StreamBuilder state: ${snapshot.connectionState}');
+                  print('DEBUG: Dashboard - Has error: ${snapshot.hasError}');
+                  print('DEBUG: Dashboard - Error: ${snapshot.error}');
+                  print('DEBUG: Dashboard - Has data: ${snapshot.hasData}');
+                  print('DEBUG: Dashboard - Data length: ${snapshot.data?.length}');
+                  
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF2E7D32),
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    final localizations = AppLocalizations.of(context)!;
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: MediaQuery.of(context).size.width * 0.16,
+                            color: Colors.grey[400],
+                          ),
+                          SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                          Text(
+                            localizations.isBengali
+                              ? 'ত্রুটি ঘটেছে'
+                              : 'Error occurred',
+                            style: TextStyle(
+                              fontSize: MediaQuery.of(context).size.width * 0.045,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[400],
+                            ),
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                            Text(
+                              localizations.isBengali
+                                ? 'ত্রুটি ঘটেছে'
+                                : 'Error occurred',
+                              style: TextStyle(
+                                fontSize: MediaQuery.of(context).size.width * 0.045,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: MediaQuery.of(context).size.width * 0.1,
+                              ),
+                              child: Text(
+                                localizations.isBengali
+                                  ? 'পুনরায় চেষ্টা করুন'
+                                  : 'Please try again',
+                                style: TextStyle(
+                                  fontSize: MediaQuery.of(context).size.width * 0.035,
+                                  color: Colors.grey[500],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final allProducts = snapshot.data ?? [];
+                  final filteredProducts = _filterProducts(allProducts);
+
+                  if (filteredProducts.isEmpty) {
+                    final localizations = AppLocalizations.of(context)!;
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _searchQuery.isNotEmpty
+                                ? (localizations.isBengali 
+                                    ? '"$_searchQuery" এর জন্য কোন পণ্য পাওয়া যায়নি'
+                                    : 'No products found for "$_searchQuery"')
+                                : (localizations.isBengali 
+                                    ? 'কোন পণ্য উপলব্ধ নেই'
+                                    : 'No products available'),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (_searchQuery.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                              child: Text(
+                                localizations.isBengali ? 'অনুসন্ধান মুছুন' : 'Clear search',
+                                style: const TextStyle(
+                                  color: Color(0xFF2E7D32),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }
+
+                  return GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                      childAspectRatio: 0.85,
+                      crossAxisSpacing: MediaQuery.of(context).size.width * 0.03,
+                      mainAxisSpacing: MediaQuery.of(context).size.width * 0.03,
+                    ),
+                    itemCount: filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = filteredProducts[index];
+                      return TweenAnimationBuilder<double>(
+                        duration: Duration(milliseconds: 600 + (index * 100)),
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        builder: (context, animationValue, child) {
+                          return Transform.translate(
+                            offset: Offset(0, 50 * (1 - animationValue)),
+                            child: Opacity(
+                              opacity: animationValue,
+                              child: AnimatedBuilder(
+                                animation: _floatingAnimation,
+                                builder: (context, child) {
+                                  return Transform.translate(
+                                    offset: Offset(0, 3 * sin((_floatingAnimation.value * 2 * pi) + (index * 0.5))),
+                                    child: ProductCard(
+                                      product: product,
+                                      onOrder: () => _showOrderDialog(product),
+                                      cartService: _cartService,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ProductCard extends StatefulWidget {
+  final ProductModel product;
+  final VoidCallback onOrder;
+  final CartService cartService;
+
+  const ProductCard({
+    super.key,
+    required this.product,
+    required this.onOrder,
+    required this.cartService,
+  });
+
+  @override
+  State<ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<ProductCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _hoverController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _elevationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _hoverController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.05,
+    ).animate(CurvedAnimation(
+      parent: _hoverController,
+      curve: Curves.easeInOut,
+    ));
+    _elevationAnimation = Tween<double>(
+      begin: 8.0,
+      end: 16.0,
+    ).animate(CurvedAnimation(
+      parent: _hoverController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _hoverController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _hoverController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Colors.grey[50]!,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: _elevationAnimation.value,
+                  offset: Offset(0, _elevationAnimation.value / 2),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF2E7D32).withOpacity(0.08),
+                  blurRadius: _elevationAnimation.value / 2,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: GestureDetector(
+              onTap: widget.onOrder,
+              onTapDown: (_) => _hoverController.forward(),
+              onTapUp: (_) => _hoverController.reverse(),
+              onTapCancel: () => _hoverController.reverse(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Product Icon/Image
+                  Container(
+                    height: 80,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFFF1F8E9),
+                          const Color(0xFFE8F5E8),
+                          const Color(0xFFDCEDC8),
+                        ],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: Center(
+                      child: TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 1500),
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        builder: (context, value, child) {
+                          return Transform.rotate(
+                            angle: value * 0.2,
+                            child: Icon(
+                              widget.product.iconData ?? Icons.agriculture,
+                              size: 45,
+                              color: const Color(0xFF2E7D32),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+          
+          // Product Details
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(
+                MediaQuery.of(context).size.width * 0.025,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      widget.product.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: MediaQuery.of(context).size.width * 0.032,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.004),
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 800),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: 0.8 + (0.2 * value),
+                        child: Text(
+                          '৳${widget.product.price.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            color: const Color(0xFF2E7D32),
+                            fontWeight: FontWeight.bold,
+                            fontSize: MediaQuery.of(context).size.width * 0.038,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.003),
+                  Flexible(
+                    child: Text(
+                      widget.product.description,
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: MediaQuery.of(context).size.width * 0.028,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Spacer(),
+                  
+                  // Add to Cart Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: MediaQuery.of(context).size.height * 0.035,
+                    child: TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 1000),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.translate(
+                          offset: Offset(0, 20 * (1 - value)),
+                          child: Opacity(
+                            opacity: value,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                widget.cartService.addToCart(widget.product);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      AppLocalizations.of(context)!.addedToCart,
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
+                                    backgroundColor: const Color(0xFF2E7D32),
+                                    duration: const Duration(seconds: 2),
+                                    action: SnackBarAction(
+                                      label: AppLocalizations.of(context)!.viewCart,
+                                      textColor: Colors.white,
+                                      onPressed: () {
+                                        // Switch to cart tab
+                                        MainNavigationController().switchToTab(2);
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2E7D32),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ).copyWith(
+                                  overlayColor: MaterialStateProperty.all(
+                                    Colors.white.withOpacity(0.1),
+                                  ),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    isInCart 
+                                      ? (AppLocalizations.of(context)!.isBengali ? 'কার্টে' : 'In Cart')
+                                      : (AppLocalizations.of(context)!.isBengali ? 'যোগ' : 'Add'),
+                                    style: TextStyle(
+                                      fontSize: MediaQuery.of(context).size.width * 0.025,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

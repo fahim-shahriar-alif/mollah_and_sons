@@ -1,0 +1,35 @@
+{
+    "name": "mollah_and_sons",
+    "short_name": "mollah_and_sons",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#hexcode",
+    "theme_color": "#hexcode",
+    "description": "Mollah and Sons Fertilizer App is a modern and user-friendly mobile application designed to make fertilizer ordering simple, fast, and reliable. This app is built exclusively for our valued customers who want to purchase high-quality fertilizers directly from Mollah and Sons without any hassle.  With this app, customers can easily browse our wide range of fertilizer products, view detailed descriptions, and place orders instantly. The app also allows users to track their order status and view their purchase history. For admin users, there is a dedicated panel to manage products, monitor orders, and update delivery statuses.  Our mission is to connect farmers and agricultural businesses with quality fertilizers at their fingertips, ensuring productivity and convenience.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
