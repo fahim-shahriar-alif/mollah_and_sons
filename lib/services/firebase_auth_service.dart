@@ -28,13 +28,28 @@ class FirebaseAuthService extends ChangeNotifier {
     required String password,
   }) async {
     try {
+      print('DEBUG: Starting sign in process for email: $email');
+      
       await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+      
+      print('DEBUG: Sign in successful for email: $email');
     } on FirebaseAuthException catch (e) {
+      print('DEBUG: FirebaseAuthException - Code: ${e.code}, Message: ${e.message}');
+      print('DEBUG: Full error details: $e');
+      
+      // Handle specific reCAPTCHA related errors
+      if (e.code == 'network-request-failed' || 
+          e.message?.contains('reCAPTCHA') == true ||
+          e.message?.contains('network error') == true) {
+        throw 'Network connection issue. Please check your internet connection and try again.';
+      }
+      
       throw _getAuthErrorMessage(e);
     } catch (e) {
+      print('DEBUG: General exception during sign in: $e');
       throw 'An unexpected error occurred. Please try again.';
     }
   }
@@ -71,8 +86,18 @@ class FirebaseAuthService extends ChangeNotifier {
       print('DEBUG: User data stored successfully');
 
     } on FirebaseAuthException catch (e) {
+      print('DEBUG: FirebaseAuthException during signup - Code: ${e.code}, Message: ${e.message}');
+      
+      // Handle specific reCAPTCHA related errors
+      if (e.code == 'network-request-failed' || 
+          e.message?.contains('reCAPTCHA') == true ||
+          e.message?.contains('network error') == true) {
+        throw 'Network connection issue. Please check your internet connection and try again.';
+      }
+      
       throw _getAuthErrorMessage(e);
     } catch (e) {
+      print('DEBUG: General exception during signup: $e');
       throw 'An unexpected error occurred. Please try again.';
     }
   }

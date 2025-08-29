@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'firebase_options.dart';
@@ -17,6 +18,12 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    
+    // Configure Firebase Auth settings
+    FirebaseAuth.instance.setSettings(
+      appVerificationDisabledForTesting: true, // Disable reCAPTCHA for testing
+    );
+    
     // Initialize auth listener
     FirebaseAuthService().initialize();
     // Initialize language service
